@@ -4,9 +4,9 @@ Painel de indicadores da TI dentro do GLPI 11: chamados, SLA, mesas de atendimen
 
 O painel fica em **Assistência › Painel TI** e também como **aba na página inicial** (Home), que pode abrir por padrão quando o técnico entra no GLPI.
 
-<!-- Coloque aqui um print do painel (com nomes e dados internos ocultos):
-![Painel TI](docs/painel.png)
--->
+
+<img width="1913" height="924" alt="PainelTI-Previa" src="https://github.com/user-attachments/assets/30597a46-cb37-428d-9240-a0eea5a919b4" />
+
 
 ## O que mostra
 
