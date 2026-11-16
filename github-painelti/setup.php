@@ -7,7 +7,7 @@
  * @license GPLv3+
  */
 
-define('PLUGIN_PAINELTI_VERSION', '1.0.0');
+define('PLUGIN_PAINELTI_VERSION', '1.1.0');
 define('PLUGIN_PAINELTI_MIN_GLPI', '11.0.0');
 define('PLUGIN_PAINELTI_MAX_GLPI', '11.0.99');
 

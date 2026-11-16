@@ -14,6 +14,7 @@ class PluginPaineltiConfig extends CommonDBTM
     /** Valores padrão */
     public const PADRAO = [
         'antivirus'       => '',  // parte do nome do antivírus padrão (vazio = qualquer antivírus)
+        'antivirus_versao' => '', // versão alvo do antivírus (vazio = a maior versão encontrada no parque)
         'horas_prestes'   => 4,   // "prestes a estourar": vence nas próximas X horas
         'dias_sem_com'    => 7,   // "sem comunicação": agente sem contato há mais de X dias
         'aba_home_padrao' => 1,   // 1 = aba Painel TI em primeiro e aberta ao entrar na Home
@@ -46,6 +47,7 @@ class PluginPaineltiConfig extends CommonDBTM
     {
         $valores = [
             'antivirus'       => mb_substr(trim((string) ($dados['antivirus'] ?? '')), 0, 100),
+            'antivirus_versao' => preg_match('/^[0-9A-Za-z._-]{1,40}$/', trim((string) ($dados['antivirus_versao'] ?? ''))) ? trim((string) $dados['antivirus_versao']) : '',
             'horas_prestes'   => max(1, min(72, (int) ($dados['horas_prestes'] ?? 4))),
             'dias_sem_com'    => max(1, min(365, (int) ($dados['dias_sem_com'] ?? 7))),
             'aba_home_padrao' => empty($dados['aba_home_padrao']) ? 0 : 1,
@@ -93,6 +95,11 @@ class PluginPaineltiConfig extends CommonDBTM
                   <label class="form-label" for="pti-d">"Sem comunicação" (dias)</label>
                   <input type="number" class="form-control" id="pti-d" name="dias_sem_com" min="1" max="365" value="<?= (int) $c['dias_sem_com'] ?>">
                   <div class="form-text">Agentes de inventário sem contato há mais de X dias.</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="pti-avv">Versão alvo do antivírus</label>
+                  <input type="text" class="form-control" id="pti-avv" name="antivirus_versao" maxlength="40" value="<?= $e($c['antivirus_versao']) ?>" placeholder="Ex.: 9.4.0.489">
+                  <div class="form-text">Quem estiver nesta versão ou em uma mais nova aparece como atualizado. Em branco: a referência é a maior versão encontrada nos computadores.</div>
                 </div>
                 <div class="col-12">
                   <div class="form-check form-switch">

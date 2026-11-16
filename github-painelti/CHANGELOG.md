@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.0] - 2026-11-16
+
+### Adicionado
+
+- Campo **Versão alvo do antivírus** direto no painel (seção Antivírus), visível para quem tem permissão de configuração, e também na página de configuração. Define a versão de referência para os cartões "Na versão alvo" e "Desatualizados". Quem está nela ou em uma mais nova conta como atualizado. Em branco, mantém o comportamento anterior (a maior versão encontrada no parque).
+
 ## [1.0.0] - 2026-11-13
 
 Primeira versão pública.

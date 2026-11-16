@@ -61,6 +61,7 @@ Em **Configurar › Plugins › Painel TI**:
 
 | Opção | Padrão | Para que serve |
 |---|---|---|
+| Versão alvo do antivírus | vazio | Versão de referência (ex.: `9.4.0.489`). Igual ou superior = atualizado. Vazio = a maior versão encontrada nos computadores |
 | Antivírus padrão (parte do nome) | vazio | Nome como aparece na aba *Antivírus* do computador (ex.: `Defender`, `Kaspersky`). Vazio = qualquer antivírus |
 | "Prestes a estourar" (horas) | 4 | Chamados com prazo de solução nas próximas X horas |
 | "Sem comunicação" (dias) | 7 | Agentes sem contato há mais de X dias |

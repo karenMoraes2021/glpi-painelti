@@ -19,12 +19,25 @@ if (!PluginPaineltiMenu::canView()) {
 /** @var array $CFG_GLPI */
 global $DB, $CFG_GLPI;
 
+// ---------------------------------------------------------------- versão alvo do antivírus (campo no painel)
+$podeEditarAlvo = Session::haveRight('config', UPDATE);
+if ($podeEditarAlvo && isset($_POST['antivirus_versao_salvar'])) {
+    // O GLPI 11 já valida o token CSRF do formulário antes de chegar aqui.
+    $novoAlvo = trim((string) ($_POST['antivirus_versao'] ?? ''));
+    if ($novoAlvo === '' || preg_match('/^[0-9A-Za-z._-]{1,40}$/', $novoAlvo)) {
+        PluginPaineltiConfig::save(array_merge(PluginPaineltiConfig::getAll(), ['antivirus_versao' => $novoAlvo]));
+    }
+    $qs = (string) ($_SERVER['QUERY_STRING'] ?? '');
+    Html::redirect($CFG_GLPI['root_doc'] . '/plugins/painelti/front/painel.php' . ($qs !== '' ? '?' . $qs : ''));
+}
+
 // ---------------------------------------------------------------- ajustes
 // Ajustes em Configurar › Plugins › Painel TI
 $ANTIVIRUS     = (string) PluginPaineltiConfig::get('antivirus');     // parte do nome do antivírus (vazio = qualquer)
 $HORAS_PRESTES = (int) PluginPaineltiConfig::get('horas_prestes');    // "prestes a estourar": vence nas próximas X horas
 $DIAS_SEM_COM  = (int) PluginPaineltiConfig::get('dias_sem_com');     // "sem comunicação": agente sem contato há mais de X dias
 $AV_ROTULO     = $ANTIVIRUS !== '' ? $ANTIVIRUS : 'qualquer antivírus';
+$ALVO_AV       = (string) PluginPaineltiConfig::get('antivirus_versao'); // versão alvo do antivírus (campo no painel ou na configuração; vazio = a maior encontrada)
 
 // ---------------------------------------------------------------- helpers
 function painelti_query(string $sql)
@@ -204,6 +217,10 @@ foreach ($porPc as $p) {
     }
 }
 uksort($dist, static fn($a, $b) => version_compare($b, $a));
+$ultimaAuto = $ultima; // maior versão encontrada (referência quando não há versão alvo)
+// Versão alvo (opcional): se informada, é a referência; senão, vale a maior versão encontrada no parque.
+$ultima = $ALVO_AV !== '' ? $ALVO_AV : $ultima;
+$avOk = static fn(string $v): bool => $v !== '' && $v !== '(sem versão)' && version_compare($v, $ultima, '>=');
 $avCom = $avAtual = $avDesat = $avInativo = $avSem = 0;
 foreach ($porPc as $p) {
     if (!$p['tem']) {
@@ -213,7 +230,7 @@ foreach ($porPc as $p) {
     $avCom++;
     if (!$p['ativo']) {
         $avInativo++;
-    } elseif ($p['versao'] === $ultima) {
+    } elseif ($avOk($p['versao'])) {
         $avAtual++;
     } else {
         $avDesat++;
@@ -266,7 +283,7 @@ foreach ($porPc as $id => $p) {
         $pcsDe['avsem'][] = $id;
     } elseif (!$p['ativo']) {
         $pcsDe['avinativo'][] = $id;
-    } elseif ($p['versao'] !== $ultima) {
+    } elseif (!$avOk($p['versao'])) {
         $pcsDe['avdesat'][] = $id;
     }
 }
@@ -321,7 +338,7 @@ if (isset($filtros[$listaChave])) {
     foreach ($porPc as $id => $p) {
         $entra = ($listaChave === 'avsem' && !$p['tem'])
             || ($listaChave === 'avinativo' && $p['tem'] && !$p['ativo'])
-            || ($listaChave === 'avdesat' && $p['tem'] && $p['ativo'] && $p['versao'] !== $ultima);
+            || ($listaChave === 'avdesat' && $p['tem'] && $p['ativo'] && !$avOk($p['versao']));
         if ($entra) {
             $listaLinhas[] = [$root . '/front/computer.form.php?id=' . $id, [$p['nome'], $p['versao'] ?: '—']];
         }
@@ -458,9 +475,19 @@ a.pti-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(10,47,
   </div>
 
   <h3>Antivírus (<?= painelti_e($AV_ROTULO) ?>)</h3>
+
+  <?php if ($podeEditarAlvo): ?>
+  <form method="post" target="_self" class="pti-alvo" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px">
+    <input type="hidden" name="_glpi_csrf_token" value="<?= Session::getNewCSRFToken() ?>">
+    <label for="pti-alvo-in" style="font-size:13px;font-weight:600;color:var(--text)">Versão alvo do antivírus</label>
+    <input type="text" id="pti-alvo-in" name="antivirus_versao" maxlength="40" value="<?= painelti_e($ALVO_AV) ?>" placeholder="<?= painelti_e($ultimaAuto !== '' ? 'Ex.: ' . $ultimaAuto : 'Ex.: 9.4.0.489') ?>" style="width:190px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);font-size:13px">
+    <button type="submit" name="antivirus_versao_salvar" value="1" style="padding:5px 14px;border:0;border-radius:6px;background:#1565c0;color:#fff;font-size:13px;cursor:pointer">Salvar</button>
+    <span style="font-size:12px;color:var(--muted)"><?= $ALVO_AV !== '' ? 'Igual ou mais nova que esta conta como atualizada.' : 'Em branco: a referência é a maior versão encontrada (' . painelti_e($ultimaAuto !== '' ? $ultimaAuto : 'nenhuma') . ').' ?></span>
+  </form>
+  <?php endif; ?>
   <div class="pti-grid">
       <?= painelti_card('Instalado', $avCom, 'ti ti-shield-check', '#1565c0', null, 'de ' . count($porPc) . ' computadores') ?>
-      <?= painelti_card('Na versão mais nova', $avPct, 'ti ti-shield-up', '#22a06b', null, $ultima !== '' ? $ultima : '') ?>
+      <?= painelti_card($ALVO_AV !== '' ? 'Na versão alvo' : 'Na versão mais nova', $avPct, 'ti ti-shield-up', '#22a06b', null, $ultima !== '' ? $ultima : '') ?>
       <?= painelti_card('Desatualizados', $avDesat, 'ti ti-shield-exclamation', '#f59e0b', $abrir('avdesat')) ?>
       <?= painelti_card('Desativados', $avInativo, 'ti ti-shield-off', '#e5484d', $abrir('avinativo')) ?>
       <?= painelti_card('Sem antivírus', $avSem, 'ti ti-shield-x', '#e5484d', $abrir('avsem')) ?>
@@ -472,11 +499,11 @@ a.pti-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(10,47,
       <?php else: $maior = max($dist); foreach ($dist as $v => $n): ?>
         <div class="pti-bar">
           <span><?= painelti_e($v) ?></span>
-          <span class="trk"><span class="fil<?= $v === $ultima ? ' top' : '' ?>" style="width:<?= round($n * 100 / $maior) ?>%"></span></span>
+          <span class="trk"><span class="fil<?= $avOk($v) ? ' top' : '' ?>" style="width:<?= round($n * 100 / $maior) ?>%"></span></span>
           <span><?= (int) $n ?></span>
         </div>
       <?php endforeach; endif; ?>
-      <div class="pti-note">Verde = versão mais nova encontrada no parque. Clique nos cartões para ver os computadores.</div>
+      <div class="pti-note"><?= $ALVO_AV !== '' ? 'Verde = versão alvo (' . painelti_e($ALVO_AV) . ') ou superior.' : 'Verde = versão mais nova encontrada no parque.' ?> Clique nos cartões para ver os computadores.</div>
     </div>
 
   <?php if ($listaTitulo !== ''): ?>
